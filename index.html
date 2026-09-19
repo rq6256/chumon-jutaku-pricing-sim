@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>注文住宅 建築費シミュレーター（デモ）</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f6f1e6;
+    --surface:#fffdf9;
+    --surface-alt:#f1ead9;
+    --ink:#241f18;
+    --ink-muted:#7c7263;
+    --line:#e3d8c1;
+    --primary:#294f40;
+    --primary-deep:#152f24;
+    --accent:#b8823c;
+    --accent-ink:#2e1c05;
+    --good-bg:#eaf1ea;
+    --focus:#3f7a5f;
+    --danger:#a4472f;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      color-scheme: dark;
+      --bg:#12181a;
+      --surface:#1b2322;
+      --surface-alt:#232b29;
+      --ink:#eae4d8;
+      --ink-muted:#9a9282;
+      --line:#333c38;
+      --primary:#87bb9d;
+      --primary-deep:#b3d9c0;
+      --accent:#e0a75a;
+      --accent-ink:#241505;
+      --good-bg:#1c2b24;
+      --focus:#87bb9d;
+      --danger:#e0876e;
+    }
+  }
+
+  *{ box-sizing:border-box; }
+  html, body{ margin:0; }
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    padding-bottom:150px;
+  }
+  .num{
+    font-family:"JetBrains Mono","SFMono-Regular",Consolas,monospace;
+    font-variant-numeric:tabular-nums;
+  }
+  h1,h2{ font-family:"Shippori Mincho","Hiragino Mincho ProN",serif; }
+
+  .page{ max-width:640px; margin:0 auto; padding:36px 20px 0; }
+
+  .masthead{ text-align:center; margin-bottom:28px; }
+  .eyebrow{
+    display:inline-block;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.16em;
+    color:var(--primary);
+    text-transform:uppercase;
+    margin-bottom:12px;
+  }
+  h1{
+    margin:0 0 8px;
+    font-size:26px;
+    font-weight:700;
+    text-wrap:balance;
+  }
+  .masthead p{ margin:0; font-size:13.5px; color:var(--ink-muted); }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:22px 22px 24px;
+    margin-bottom:16px;
+  }
+  .card h2{
+    margin:0 0 18px;
+    font-size:15.5px;
+    font-weight:700;
+    color:var(--primary-deep);
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+  }
+  .card h2 .step-no{
+    font-family:"JetBrains Mono",monospace;
+    font-size:12px;
+    font-weight:700;
+    color:var(--surface);
+    background:var(--primary);
+    width:20px; height:20px;
+    border-radius:5px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+
+  .field{ margin-bottom:18px; }
+  .field:last-child{ margin-bottom:0; }
+  .field > label{
+    display:block;
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--ink-muted);
+    letter-spacing:.02em;
+    margin-bottom:9px;
+  }
+  select, input[type="number"]{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:14px;
+    font-family:inherit;
+    background:var(--surface-alt);
+    color:var(--ink);
+  }
+  .field-inline{ display:flex; align-items:center; gap:10px; }
+  .field-inline input{ flex:0 0 110px; }
+  .unit{ font-size:13.5px; color:var(--ink-muted); }
+  .submeasure{ font-size:12px; color:var(--ink-muted); }
+
+  /* segmented control */
+  .segmented{ display:flex; gap:8px; flex-wrap:wrap; }
+  .seg-btn{ position:relative; flex:1 1 auto; min-width:80px; }
+  .seg-btn input{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+  .seg-btn span{
+    display:block;
+    text-align:center;
+    padding:10px 8px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--surface-alt);
+    font-size:13px;
+    font-weight:500;
+    color:var(--ink);
+  }
+  .seg-btn:has(input:checked) span{
+    background:var(--primary);
+    border-color:var(--primary);
+    color:var(--surface);
+    font-weight:700;
+  }
+  .seg-btn:has(input:focus-visible) span{
+    outline:2px solid var(--focus);
+    outline-offset:2px;
+  }
+
+  /* grade cards */
+  .grade-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
+  .grade-card{
+    position:relative;
+    display:block;
+    border:1.5px solid var(--line);
+    border-radius:10px;
+    padding:14px 14px 15px;
+    background:var(--surface-alt);
+    cursor:pointer;
+  }
+  .grade-card input{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+  .gc-title{ display:block; font-size:14px; font-weight:700; margin-bottom:4px; }
+  .gc-desc{ display:block; font-size:11.5px; color:var(--ink-muted); line-height:1.5; }
+  .grade-card:has(input:checked){
+    border-color:var(--primary);
+    background:var(--good-bg);
+  }
+  .grade-card:has(input:checked) .gc-title{ color:var(--primary-deep); }
+  .grade-card:has(input:focus-visible){ outline:2px solid var(--focus); outline-offset:2px; }
+
+  /* toggle rows */
+  .toggle-list{ display:flex; flex-direction:column; gap:2px; }
+  .toggle-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    padding-block:12px;
+    border-bottom:1px dashed var(--line);
+    cursor:pointer;
+  }
+  .toggle-row:last-child{ border-bottom:none; }
+  .tr-text{ display:flex; flex-direction:column; gap:2px; }
+  .tr-title{ font-size:13.5px; font-weight:500; }
+  .tr-price{ font-size:12px; color:var(--accent); font-weight:700; }
+  .toggle-row input{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+  .switch{
+    position:relative;
+    width:42px; height:24px;
+    border-radius:999px;
+    background:var(--line);
+    flex-shrink:0;
+    transition:background .15s ease;
+  }
+  .switch::after{
+    content:"";
+    position:absolute; top:3px; left:3px;
+    width:18px; height:18px;
+    border-radius:50%;
+    background:var(--surface);
+    box-shadow:0 1px 3px rgba(0,0,0,.25);
+    transition:transform .15s ease;
+  }
+  .toggle-row:has(input:checked) .switch{ background:var(--primary); }
+  .toggle-row:has(input:checked) .switch::after{ transform:translateX(18px); }
+  .toggle-row:has(input:focus-visible) .switch{ outline:2px solid var(--focus); outline-offset:2px; }
+
+  /* sticky summary */
+  .summary{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    background:var(--surface);
+    border-top:1px solid var(--line);
+    box-shadow:0 -8px 24px -12px rgba(18,20,15,.35);
+    padding:14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+    z-index:10;
+  }
+  .summary-inner{ max-width:640px; margin:0 auto; }
+  .summary-toggle{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    width:100%;
+    background:none;
+    border:none;
+    font-family:inherit;
+    font-size:12px;
+    font-weight:700;
+    color:var(--ink-muted);
+    padding:2px 0 10px;
+    cursor:pointer;
+  }
+  .summary-toggle svg{ transition:transform .15s ease; }
+  .summary-toggle[aria-expanded="true"] svg{ transform:rotate(180deg); }
+
+  .summary-breakdown{
+    padding-bottom:10px;
+    margin-bottom:8px;
+    border-bottom:1px dashed var(--line);
+  }
+  .sb-row{
+    display:flex;
+    justify-content:space-between;
+    font-size:12.5px;
+    color:var(--ink-muted);
+    padding-block:4px;
+  }
+  .sb-row .num{ color:var(--ink); }
+
+  .summary-total{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:8px;
+    padding-top:8px;
+    border-top:3px double var(--line);
+    margin-bottom:12px;
+  }
+  .summary-total .cap{ font-size:11.5px; font-weight:700; color:var(--ink-muted); }
+  .summary-total .figure{ font-size:23px; font-weight:700; color:var(--primary-deep); line-height:1.2; }
+  .summary-total .sep{ font-size:14px; color:var(--ink-muted); font-weight:500; margin-inline:2px; }
+  .summary-total .unit-lg{ font-size:13px; font-weight:500; color:var(--ink-muted); margin-left:2px; }
+
+  .cta{
+    display:block;
+    width:100%;
+    padding:14px;
+    background:var(--accent);
+    color:var(--accent-ink);
+    border:none;
+    border-radius:9px;
+    font-size:15px;
+    font-family:inherit;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .cta:hover{ filter:brightness(1.05); }
+  .cta:focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+
+  .note{
+    max-width:640px;
+    margin:4px auto 0;
+    padding:12px 14px;
+    background:var(--good-bg);
+    border-radius:8px;
+    font-size:11.5px;
+    line-height:1.7;
+    color:var(--ink-muted);
+  }
+  .demo-flag{
+    text-align:center;
+    font-size:11px;
+    color:var(--ink-muted);
+    margin:16px auto 0;
+    max-width:640px;
+    line-height:1.7;
+  }
+
+  @media (max-width:460px){
+    .grade-grid{ grid-template-columns:1fr; }
+    h1{ font-size:22px; }
+    .summary-total .figure{ font-size:20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="masthead">
+    <span class="eyebrow">注文住宅 建築費シミュレーション ー デモ</span>
+    <h1>注文住宅 建築費シミュレーター</h1>
+    <p>面積・構造・仕様・設備を選ぶだけで、建築費の目安と内訳がその場でわかります</p>
+  </div>
+
+  <main>
+    <section class="card">
+      <h2><span class="step-no">1</span>建物の基本条件</h2>
+      <div class="field">
+        <label for="area">延床面積</label>
+        <div class="field-inline">
+          <input type="number" id="area" value="35" min="15" max="120" step="1">
+          <span class="unit">坪</span>
+          <span class="submeasure num" id="areaSqm">（約 115.7㎡）</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>階数</label>
+        <div class="segmented">
+          <label class="seg-btn"><input type="radio" name="floors" value="single" id="floorsSingle"><span>平屋</span></label>
+          <label class="seg-btn"><input type="radio" name="floors" value="2f" id="floors2f" checked><span>2階建て</span></label>
+          <label class="seg-btn"><input type="radio" name="floors" value="3f" id="floors3f"><span>3階建て</span></label>
+        </div>
+      </div>
+      <div class="field">
+        <label>構造・工法</label>
+        <div class="segmented">
+          <label class="seg-btn"><input type="radio" name="structure" value="wood" id="structWood" checked><span>木造</span></label>
+          <label class="seg-btn"><input type="radio" name="structure" value="steel" id="structSteel"><span>鉄骨造</span></label>
+          <label class="seg-btn"><input type="radio" name="structure" value="rc" id="structRc"><span>RC造</span></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="step-no">2</span>仕様グレード</h2>
+      <div class="grade-grid">
+        <label class="grade-card">
+          <input type="radio" name="grade" value="basic" id="gradeBasic">
+          <span class="gc-title">ベーシック</span>
+          <span class="gc-desc">コストを抑えたシンプル仕様</span>
+        </label>
+        <label class="grade-card">
+          <input type="radio" name="grade" value="standard" id="gradeStandard" checked>
+          <span class="gc-title">スタンダード</span>
+          <span class="gc-desc">標準仕様のバランス型</span>
+        </label>
+        <label class="grade-card">
+          <input type="radio" name="grade" value="premium" id="gradePremium">
+          <span class="gc-title">プレミアム</span>
+          <span class="gc-desc">素材・性能にこだわった上位仕様</span>
+        </label>
+        <label class="grade-card">
+          <input type="radio" name="grade" value="luxury" id="gradeLuxury">
+          <span class="gc-title">ラグジュアリー</span>
+          <span class="gc-desc">最上級グレードのフルオーダー</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="step-no">3</span>間取り</h2>
+      <div class="field">
+        <label>LDK</label>
+        <div class="segmented">
+          <label class="seg-btn"><input type="radio" name="ldk" value="2ldk" id="ldk2"><span>2LDK</span></label>
+          <label class="seg-btn"><input type="radio" name="ldk" value="3ldk" id="ldk3" checked><span>3LDK</span></label>
+          <label class="seg-btn"><input type="radio" name="ldk" value="4ldk" id="ldk4"><span>4LDK</span></label>
+          <label class="seg-btn"><input type="radio" name="ldk" value="5ldk" id="ldk5"><span>5LDK以上</span></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="step-no">4</span>外装仕様</h2>
+      <div class="field">
+        <label for="wall">外壁材</label>
+        <select id="wall">
+          <option value="siding" data-add="0">窯業系サイディング（標準）</option>
+          <option value="galva" data-add="1.5">ガルバリウム鋼板（+1.5万円/坪）</option>
+          <option value="tile" data-add="4">タイル張り（+4万円/坪）</option>
+          <option value="nuri" data-add="3">塗り壁仕上げ（+3万円/坪）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="roof">屋根材</label>
+        <select id="roof">
+          <option value="slate" data-add="0">化粧スレート（標準）</option>
+          <option value="galva" data-add="1">ガルバリウム鋼板（+1万円/坪）</option>
+          <option value="kawara" data-add="2.5">陶器瓦（+2.5万円/坪）</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="step-no">5</span>水まわり設備</h2>
+      <div class="field">
+        <label for="kitchen">キッチングレード</label>
+        <select id="kitchen">
+          <option value="standard" data-add="0">標準グレード</option>
+          <option value="high" data-add="80">ハイグレード（+80万円）</option>
+          <option value="luxury" data-add="200">ラグジュアリー（+200万円）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="bath">浴室グレード</label>
+        <select id="bath">
+          <option value="standard" data-add="0">標準グレード</option>
+          <option value="high" data-add="50">ハイグレード（+50万円）</option>
+          <option value="luxury" data-add="150">ラグジュアリー（+150万円）</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="step-no">6</span>性能・快適設備オプション</h2>
+      <div class="toggle-list" id="optionsGroup">
+        <label class="toggle-row">
+          <span class="tr-text"><span class="tr-title">高断熱仕様（断熱等級6〜7）</span><span class="tr-price num">+150万円</span></span>
+          <input type="checkbox" value="150" id="optInsulation">
+          <span class="switch"></span>
+        </label>
+        <label class="toggle-row">
+          <span class="tr-text"><span class="tr-title">耐震等級3 対応</span><span class="tr-price num">+80万円</span></span>
+          <input type="checkbox" value="80" id="optSeismic">
+          <span class="switch"></span>
+        </label>
+        <label class="toggle-row">
+          <span class="tr-text"><span class="tr-title">太陽光発電システム（5kW目安）</span><span class="tr-price num">+120万円</span></span>
+          <input type="checkbox" value="120" id="optSolar">
+          <span class="switch"></span>
+        </label>
+        <label class="toggle-row">
+          <span class="tr-text"><span class="tr-title">全館空調システム</span><span class="tr-price num">+180万円</span></span>
+          <input type="checkbox" value="180" id="optHvac">
+          <span class="switch"></span>
+        </label>
+        <label class="toggle-row">
+          <span class="tr-text"><span class="tr-title">床暖房（LDK）</span><span class="tr-price num">+60万円</span></span>
+          <input type="checkbox" value="60" id="optFloorHeating">
+          <span class="switch"></span>
+        </label>
+        <label class="toggle-row">
+          <span class="tr-text"><span class="tr-title">造作収納・造作家具</span><span class="tr-price num">+50万円</span></span>
+          <input type="checkbox" value="50" id="optBuiltin">
+          <span class="switch"></span>
+        </label>
+        <label class="toggle-row">
+          <span class="tr-text"><span class="tr-title">スマートホーム（IoT）設備</span><span class="tr-price num">+40万円</span></span>
+          <input type="checkbox" value="40" id="optSmart">
+          <span class="switch"></span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="step-no">7</span>外構・その他</h2>
+      <div class="toggle-list" id="exteriorGroup">
+        <label class="toggle-row">
+          <span class="tr-text"><span class="tr-title">カーポート・ガレージ</span><span class="tr-price num">+60万円</span></span>
+          <input type="checkbox" value="60" id="optCarport">
+          <span class="switch"></span>
+        </label>
+        <label class="toggle-row">
+          <span class="tr-text"><span class="tr-title">外構工事（フェンス・植栽等）</span><span class="tr-price num">+100万円</span></span>
+          <input type="checkbox" value="100" id="optExterior">
+          <span class="switch"></span>
+        </label>
+      </div>
+    </section>
+  </main>
+
+  <p class="note">※本シミュレーションはあくまで概算デモです。実際の金額は仕様・地域・地盤条件等により変動し、正式には現地調査・詳細ヒアリング後のお見積りとなります。土地代は含みません。</p>
+  <p class="demo-flag">これは営業用デモ画面です。単価・項目・ロゴ・配色は導入企業ごとにカスタマイズしてご提供します。</p>
+</div>
+
+<div class="summary" id="summary">
+  <div class="summary-inner">
+    <button class="summary-toggle" id="summaryToggle" aria-expanded="false" aria-controls="summaryBreakdown">
+      <span id="summaryToggleLabel">内訳を見る</span>
+      <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="summary-breakdown" id="summaryBreakdown" hidden>
+      <div class="sb-row"><span>本体工事費</span><span class="num" id="bdMain">-</span></div>
+      <div class="sb-row"><span>付帯工事費</span><span class="num" id="bdIncidental">-</span></div>
+      <div class="sb-row"><span>諸費用</span><span class="num" id="bdMisc">-</span></div>
+    </div>
+    <div class="summary-total">
+      <span class="cap">建築費 概算合計（税込）</span>
+      <span class="figure">
+        <span class="num" id="totalLow">-</span><span class="sep">〜</span><span class="num" id="totalHigh">-</span><span class="unit-lg">万円</span>
+      </span>
+    </div>
+    <button class="cta" id="ctaBtn">この内容で無料相談する</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  function getRadioValue(name){
+    var el = document.querySelector('input[name="' + name + '"]:checked');
+    return el ? el.value : null;
+  }
+  function sumChecked(containerId){
+    var total = 0;
+    document.querySelectorAll('#' + containerId + ' input[type="checkbox"]:checked').forEach(function(el){
+      total += Number(el.value);
+    });
+    return total;
+  }
+  function formatMan(v){
+    return Math.round(v).toLocaleString('ja-JP');
+  }
+  function roundTo10(v){
+    return Math.round(v / 10) * 10;
+  }
+  function setText(id, text){
+    document.getElementById(id).textContent = text;
+  }
+
+  var BASE_UNIT = { wood: 58, steel: 68, rc: 88 };
+  var GRADE_MUL = { basic: 0.85, standard: 1.0, premium: 1.3, luxury: 1.7 };
+  var FLOORS_MUL = { single: 1.08, '2f': 1.0, '3f': 1.06 };
+  var LDK_MUL = { '2ldk': 0.95, '3ldk': 1.0, '4ldk': 1.05, '5ldk': 1.12 };
+
+  function calc(){
+    var area = Number(document.getElementById('area').value) || 0;
+    var floors = getRadioValue('floors') || '2f';
+    var structure = getRadioValue('structure') || 'wood';
+    var grade = getRadioValue('grade') || 'standard';
+    var ldk = getRadioValue('ldk') || '3ldk';
+
+    var wallSel = document.getElementById('wall');
+    var wallAdd = Number(wallSel.options[wallSel.selectedIndex].dataset.add);
+    var roofSel = document.getElementById('roof');
+    var roofAdd = Number(roofSel.options[roofSel.selectedIndex].dataset.add);
+    var kitchenSel = document.getElementById('kitchen');
+    var kitchenAdd = Number(kitchenSel.options[kitchenSel.selectedIndex].dataset.add);
+    var bathSel = document.getElementById('bath');
+    var bathAdd = Number(bathSel.options[bathSel.selectedIndex].dataset.add);
+
+    var optionsAdd = sumChecked('optionsGroup');
+    var exteriorAdd = sumChecked('exteriorGroup');
+
+    var unitPrice = BASE_UNIT[structure] * GRADE_MUL[grade] * FLOORS_MUL[floors] * LDK_MUL[ldk];
+    var bodyCost = unitPrice * area;
+    var wallRoofCost = (wallAdd + roofAdd) * area;
+    var fixtureCost = kitchenAdd + bathAdd;
+
+    var mainConstruction = bodyCost + wallRoofCost + fixtureCost + optionsAdd;
+    var incidental = mainConstruction * 0.15 + exteriorAdd;
+    var misc = (mainConstruction + incidental) * 0.07;
+    var total = mainConstruction + incidental + misc;
+
+    var low = roundTo10(total * 0.92);
+    var high = roundTo10(total * 1.12);
+
+    setText('bdMain', formatMan(mainConstruction) + ' 万円');
+    setText('bdIncidental', formatMan(incidental) + ' 万円');
+    setText('bdMisc', formatMan(misc) + ' 万円');
+    setText('totalLow', formatMan(low));
+    setText('totalHigh', formatMan(high));
+
+    document.getElementById('areaSqm').textContent = '（約 ' + (area * 3.305785).toFixed(1) + '㎡）';
+  }
+
+  document.querySelectorAll('input, select').forEach(function(el){
+    el.addEventListener('input', calc);
+    el.addEventListener('change', calc);
+  });
+
+  var toggleBtn = document.getElementById('summaryToggle');
+  var breakdown = document.getElementById('summaryBreakdown');
+  var toggleLabel = document.getElementById('summaryToggleLabel');
+  toggleBtn.addEventListener('click', function(){
+    var expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+    toggleBtn.setAttribute('aria-expanded', String(!expanded));
+    breakdown.hidden = expanded;
+    toggleLabel.textContent = expanded ? '内訳を見る' : '内訳を閉じる';
+  });
+
+  document.getElementById('ctaBtn').addEventListener('click', function(){
+    alert('デモ画面です。実際の設置後は、ここから相談フォーム・電話・LINE等へ接続します。');
+  });
+
+  calc();
+})();
+</script>
+</body>
+  </html>
+</html>
